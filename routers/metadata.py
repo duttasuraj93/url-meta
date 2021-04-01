@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from selenium import webdriver
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-import requests, json, re
+import requests, re
 
 router = APIRouter()
 
@@ -10,18 +10,29 @@ router = APIRouter()
 def getMetadata(url: str = ''):
 
     try:
-        driver = webdriver.Firefox()
-        driver.get(url)
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-
+        
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+       
         title = get_title(soup)
         description = get_description(soup)
         image = get_image(soup)
         if image:
             image = validate_image_url(image, url)
 
-        driver.close()
-
+        # Run with webdriver only if necessary. This takes a bit longer
+        if not description and not image:
+            driver = webdriver.Firefox()
+            driver.get(url)
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            title = get_title(soup)
+            description = get_description(soup)
+            image = get_image(soup)
+            if image:
+                image = validate_image_url(image, url)
+            driver.close()
+        
+        
         return {
             "url": url,
             "title": title,
